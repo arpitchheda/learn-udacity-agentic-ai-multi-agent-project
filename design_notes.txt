@@ -1,0 +1,201 @@
+============================================================
+  MUNDER DIFFLIN PAPER COMPANY — MULTI-AGENT SYSTEM
+  Design Notes: How the System Works
+============================================================
+
+------------------------------------------------------------
+OVERVIEW
+------------------------------------------------------------
+
+This system automates three core business operations for the
+Munder Difflin Paper Company using four AI agents built with
+the smolagents framework:
+
+  1. Inventory management  — check stock levels
+  2. Quote generation      — price orders using historical data
+  3. Order fulfillment     — record transactions, update cash balance
+
+All agents share a single SQLite database (munder_difflin.db)
+accessed through a common set of helper functions in db_helpers.py.
+
+
+------------------------------------------------------------
+AGENT ARCHITECTURE
+------------------------------------------------------------
+
+  Customer Request
+        |
+        v
+  Orchestrator Agent  (CodeAgent)
+    |        |              |
+    v        v              v
+Inventory  Quoting        Sales
+Agent      Agent          Agent
+    |        |              |
+    +--------+--------------+
+                 |
+                 v
+          SQLite Database
+
+
+ORCHESTRATOR AGENT (CodeAgent)
+  The single entry point for every customer request. Generates
+  Python code at each reasoning step to coordinate the three
+  worker agents in sequence. Never queries the database directly.
+
+  Responsibilities:
+    - Parse the request text and extract the date
+    - Map informal customer item names to exact database names
+      (e.g. "A4 glossy paper" -> "Glossy paper",
+             "heavy cardstock" -> "100 lb cover stock")
+    - Verify stock availability for each requested item
+    - Apply tiered bulk discounts:
+        0-500 units   = 0% discount
+        501-1000 units = 10% discount
+        1001+ units    = 15% discount
+    - Call worker agents in order: inventory -> quoting -> sales
+    - Assemble the final customer-facing response
+
+INVENTORY AGENT (ToolCallingAgent)
+  Handles all stock-related queries.
+
+    check_all_inventory   uses get_all_inventory()
+      Returns full stock snapshot with unit prices as of a date.
+
+    check_stock_level     uses get_stock_level()
+      Returns units on hand for a single specific item.
+
+QUOTING AGENT (ToolCallingAgent)
+  Estimates prices and delivery timelines.
+
+    search_quote_history_tool   uses search_quote_history()
+      Finds comparable past quotes to guide pricing.
+      Filters out invalid rows where total_amount = -1.
+
+    estimate_delivery           uses get_supplier_delivery_date()
+      Calculates delivery lead time based on order quantity.
+      (<=10 units: same day | <=100: +1 day | <=1000: +4 days | >1000: +7 days)
+
+    get_item_unit_prices        uses inventory table directly
+      Looks up exact unit prices for specific items.
+
+SALES AGENT (ToolCallingAgent)
+  Records confirmed transactions and enforces financial controls.
+
+    finalize_sale               uses create_transaction()
+      Records a completed customer sale in the database.
+
+    approve_purchase            uses get_cash_balance()
+      Enforces a 20% cash safety margin before approving any
+      stock purchase spend, preventing insolvency.
+
+    check_cash_balance          uses get_cash_balance()
+      Returns the current cash position as of a given date.
+
+    calculate_financial_health  uses generate_financial_report()
+      Rates business health as EXCELLENT / GOOD / FAIR / POOR
+      based on the cash-to-total-assets ratio.
+
+    generate_report             uses generate_financial_report()
+      Produces a full financial summary: cash, inventory value,
+      total assets, and top-selling products.
+
+
+------------------------------------------------------------
+ORCHESTRATION FLOW (per request)
+------------------------------------------------------------
+
+Step 1  Orchestrator calls inventory_agent to get the full item
+        list with stock quantities and unit prices as of the
+        request date.
+
+Step 2  Orchestrator maps informal item names in the customer
+        request to exact database item names.
+
+Step 3  Orchestrator checks that available stock >= requested
+        quantity for each item. Items failing this check are
+        flagged as unfulfillable.
+
+Step 4  Orchestrator calls quoting_agent to retrieve historical
+        pricing benchmarks and the estimated delivery date.
+
+Step 5  For each fulfillable item, orchestrator calls sales_agent
+        to record the sale transaction in the database.
+
+Step 6  Orchestrator returns a professional customer response:
+        - Each item: name, quantity, unit price, discount, total
+        - Overall order total and estimated delivery date
+        - Reason for any items that could not be fulfilled
+
+
+------------------------------------------------------------
+DESIGN DECISIONS
+------------------------------------------------------------
+
+CodeAgent for the orchestrator
+  CodeAgent generates executable Python code at each step,
+  allowing it to loop over variable-length item lists, branch
+  on stock availability, and call agents conditionally. This
+  is better suited to orchestration than ToolCallingAgent,
+  which selects from a fixed tool list.
+
+ToolCallingAgent for worker agents
+  Each worker has a small, well-defined tool set (2-5 tools)
+  and does not need dynamic code generation. ToolCallingAgent
+  is simpler, more predictable, and uses fewer tokens per step.
+
+Non-overlapping responsibilities
+  The inventory agent never prices or books. The quoting agent
+  never checks stock or writes transactions. The sales agent
+  never reads inventory. This makes each agent independently
+  testable and prevents duplicated logic.
+
+Modular package structure
+  All agent code lives in agents/ with one file per agent.
+  Shared infrastructure (db_engine and all 7 helper functions)
+  lives in db_helpers.py, avoiding circular imports.
+
+20% cash safety margin
+  The approve_purchase tool in the sales agent rejects any
+  stock spend that would leave cash below 20% of the current
+  balance. This is an automated financial control that runs
+  on every proposed purchase without human intervention.
+
+Checkpoint / resume
+  test_results.csv is written incrementally after every request.
+  On restart without --force-rerun, the harness reads completed
+  request IDs and skips them, so a crash costs only the
+  in-flight request rather than the entire run.
+
+Retry with exponential backoff
+  Transient errors (rate limit, timeout, 5xx) are retried up
+  to 5 times with delays of 2, 4, 8, 16, 32 seconds.
+  Budget and auth errors are non-retryable and logged immediately
+  so the run continues with the next request.
+
+
+------------------------------------------------------------
+HOW TO RUN
+------------------------------------------------------------
+
+1. Add your API key to .env:
+     UDACITY_OPENAI_API_KEY=your_key_here
+
+2. Activate the virtual environment (Windows):
+     .\venv\Scripts\activate
+
+3. Run the full evaluation:
+     python project_starter.py
+
+4. Results are written to test_results.csv
+
+Optional flags:
+  --force-rerun   Reinitialise DB and reprocess all 20 requests
+  --dry-run       Run only request 1, skip CSV write (smoke test)
+  --limit N       Process only the first N requests
+
+To view the workflow diagram:
+  Open workflow_diagram.html in any browser.
+  Mermaid source is in workflow_diagram.mmd.
+
+============================================================

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Munder Difflin — Multi-Agent Workflow</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f7fa;
+      margin: 0;
+      padding: 24px;
+    }
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      margin-bottom: 8px;
+      font-size: 24px;
+    }
+    p.subtitle {
+      text-align: center;
+      color: #7f8c8d;
+      margin-bottom: 24px;
+      font-size: 14px;
+    }
+    .mermaid-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.10);
+      padding: 32px;
+      max-width: 960px;
+      margin: 0 auto;
+      overflow-x: auto;
+    }
+    .mermaid {
+      min-width: 700px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Munder Difflin Paper Company</h1>
+  <p class="subtitle">Multi-Agent System — Workflow Diagram</p>
+  <div class="mermaid-container">
+    <div class="mermaid">
+%%{init: {'theme': 'default', 'themeVariables': {'fontSize': '16px', 'fontFamily': 'Arial'}}}%%
+graph TD
+    Customer([Customer Request]) --> OA
+
+    OA["Orchestrator Agent\nCodeAgent\n─────────────────\n1. Parse request and date\n2. Map item names to DB names\n3. Check stock and apply discounts\n4. Assemble customer response"]
+
+    OA -->|"get stock and prices"| IA
+    OA -->|"get quotes and delivery"| QA
+    OA -->|"record confirmed sale"| SA
+
+    IA["Inventory Agent  |  ToolCallingAgent\n══════════════════════════════════════\ncheck_all_inventory\n  → get_all_inventory()  |  full stock snapshot + unit prices\n\ncheck_stock_level\n  → get_stock_level()  |  units on hand for one item"]
+
+    QA["Quoting Agent  |  ToolCallingAgent\n══════════════════════════════════════\nsearch_quote_history_tool\n  → search_quote_history()  |  find comparable past quotes for pricing\n\nestimate_delivery\n  → get_supplier_delivery_date()  |  lead time based on order qty\n\nget_item_unit_prices\n  → inventory table  |  exact unit price per item"]
+
+    SA["Sales Agent  |  ToolCallingAgent\n══════════════════════════════════════\nfinalize_sale\n  → create_transaction()  |  record sale, add revenue to cash\n\napprove_purchase\n  → get_cash_balance()  |  enforce 20% cash safety reserve\n\ncheck_cash_balance\n  → get_cash_balance()  |  current cash position\n\ncalculate_financial_health\n  → generate_financial_report()  |  rate health EXCELLENT/GOOD/FAIR/POOR\n\ngenerate_report\n  → generate_financial_report()  |  full assets + top-sellers summary"]
+
+    DB[("SQLite DB\nmunder_difflin.db\n──────────────\ntransactions\ninventory\nquotes\nquote_requests")]
+
+    IA -->|"stock levels"| OA
+    QA -->|"pricing and delivery date"| OA
+    SA -->|"transaction confirmation"| OA
+
+    IA --- DB
+    QA --- DB
+    SA --- DB
+
+    OA --> Response([Customer Response\nitem · qty · price · discount\ndelivery date · unfulfilled reasons])
+    </div>
+  </div>
+  <script>
+    mermaid.initialize({ startOnLoad: true, securityLevel: 'loose' });
+  </script>
+</body>
+</html>
