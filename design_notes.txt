@@ -195,6 +195,7 @@ Optional flags:
   --limit N       Process only the first N requests
 
 To view the workflow diagram:
+  Check the workflow_diagram.png file or 
   Open workflow_diagram.html in any browser.
   Mermaid source is in workflow_diagram.mmd.
 
