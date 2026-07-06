@@ -11,15 +11,25 @@ owns only:
 """
 
 import ast
+import logging
 import os
+import shutil
 import sys
 import time
+from pathlib import Path
 
 # Force UTF-8 output so Unicode characters in agent responses don't crash on Windows
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
+from logger_config import setup_logging, get_logger
+
+# Initialise logging before anything else — DEBUG to file, INFO to console
+setup_logging(log_file="run_output.log", level=logging.DEBUG)
+logger = get_logger("project_starter")
+
 import pandas as pd
 import numpy as np
 from datetime import datetime
@@ -44,13 +54,8 @@ from db_helpers import (
 # ---------------------------------------------------------------------------
 # Agent package — orchestrator + retry wrapper
 # ---------------------------------------------------------------------------
-from agents import (
-    orchestrator_agent,
-    inventory_agent,
-    quoting_agent,
-    sales_agent,
-    run_with_retry,
-)
+from agents import run_with_retry, OrchestratorDeps
+from agents.model_config import set_request_context, set_run_id, TOKEN_CSV
 
 # ---------------------------------------------------------------------------
 # Paper product catalogue — full list of 42 items that Munder Difflin stocks
@@ -225,14 +230,40 @@ def init_database(engine: Engine, seed: int = 137) -> Engine:
         return engine
 
     except Exception as exc:
-        print(f"Error initializing database: {exc}")
+        logger.error("Error initializing database: %s", exc)
         raise
 
 
 # ---------------------------------------------------------------------------
 # Checkpoint helpers
 # ---------------------------------------------------------------------------
-RESULTS_CSV = "test_results.csv"
+RESULTS_CSV    = "test_results.csv"
+CHECKPOINT_DIR = Path("checkpoints")
+_DB_PATH       = Path("munder_difflin.db")
+
+
+# ---------------------------------------------------------------------------
+# DB checkpoint helpers — snapshot the DB after each request so --request N
+# can restore state without re-running every prior request.
+# ---------------------------------------------------------------------------
+
+def _save_checkpoint(request_id: int) -> None:
+    """Copy the current DB to checkpoints/db_after_{N}.db."""
+    CHECKPOINT_DIR.mkdir(exist_ok=True)
+    dest = CHECKPOINT_DIR / f"db_after_{request_id}.db"
+    shutil.copy2(_DB_PATH, dest)
+    logger.debug("[checkpoint] Saved after request %d → %s", request_id, dest)
+
+
+def _restore_checkpoint(request_id: int) -> bool:
+    """Restore DB from snapshot taken after request_id. Returns True if found."""
+    src = CHECKPOINT_DIR / f"db_after_{request_id}.db"
+    if src.exists():
+        shutil.copy2(src, _DB_PATH)
+        logger.info("[checkpoint] Restored DB state from after request %d", request_id)
+        return True
+    logger.debug("[checkpoint] No checkpoint for after request %d", request_id)
+    return False
 
 
 def _load_completed_request_ids(results_csv: str) -> dict:
@@ -258,7 +289,7 @@ def _load_completed_request_ids(results_csv: str) -> dict:
             if not str(row.get("response", "")).startswith("[ERROR]")
         }
     except Exception as exc:
-        print(f"[WARN] Could not read {results_csv}: {exc}. Starting fresh.")
+        logger.warning("Could not read %s: %s. Starting fresh.", results_csv, exc)
         return {}
 
 
@@ -269,6 +300,8 @@ def run_test_scenarios(
     dry_run: bool = False,
     limit: int = None,
     force_rerun: bool = False,
+    interactive: bool = False,
+    target_request: int = None,
 ) -> list:
     """
     Process requests from quote_requests_sample.csv through the multi-agent system.
@@ -278,11 +311,12 @@ def run_test_scenarios(
         successful response. Only failed or new requests are processed.
 
     Args:
-        dry_run:      If True, process only the first pending request without
-                      writing the CSV — use this to verify API key and budget.
-        limit:        Maximum number of pending requests to process this run.
-        force_rerun:  Ignore existing results and rerun all 20 requests from
-                      scratch, re-initialising the database first.
+        dry_run:         Process only the first pending request without writing CSV.
+        limit:           Maximum number of pending requests to process this run.
+        force_rerun:     Ignore existing results, reinit DB, run all 20 from scratch.
+        target_request:  Run only up to request N.  If N has an existing result it
+                         is deleted and re-run.  Prerequisites (1..N-1) are run first
+                         if not already done, using DB checkpoints where available.
 
     Returns:
         List of result dicts (one per request) sorted by request_id.
@@ -299,35 +333,84 @@ def run_test_scenarios(
         sample = sample.sort_values("request_date").reset_index(drop=True)
         sample["request_id"] = range(1, len(sample) + 1)
     except Exception as exc:
-        print(f"FATAL: Could not load quote_requests_sample.csv: {exc}")
+        logger.critical("Could not load quote_requests_sample.csv: %s", exc)
         return []
 
     # ------------------------------------------------------------------
     # Determine which requests still need processing
     # ------------------------------------------------------------------
-    if force_rerun:
-        print("Initializing Database... (--force-rerun: starting fresh)")
+    if target_request is not None:
+        N = target_request
+        logger.info("[--request %d] Single-request mode.", N)
+
+        # Remove result for N (and any beyond N) from the CSV so we can re-run cleanly
+        if os.path.exists(RESULTS_CSV):
+            df_csv = pd.read_csv(RESULTS_CSV)
+            df_keep = df_csv[df_csv["request_id"].astype(int) < N]
+            removed = len(df_csv) - len(df_keep)
+            if removed:
+                logger.info("[--request %d] Removed %d result row(s) >= %d from CSV.", N, removed, N)
+            if len(df_keep) > 0:
+                df_keep.to_csv(RESULTS_CSV, index=False)
+            else:
+                os.remove(RESULTS_CSV)
+
+        # Set up DB state: restore checkpoint from after N-1, or init fresh
+        if N == 1:
+            logger.info("[--request %d] Initializing DB from scratch.", N)
+            init_database(db_engine)
+            completed = {}
+        elif _restore_checkpoint(N - 1):
+            # DB is now in the exact state after request N-1 was processed
+            completed = {
+                k: v for k, v in _load_completed_request_ids(RESULTS_CSV).items()
+                if k < N
+            }
+            logger.info(
+                "[--request %d] Checkpoint restored — %d prior request(s) already done.",
+                N, len(completed),
+            )
+        else:
+            # No checkpoint exists yet — run all prerequisites from scratch
+            logger.info(
+                "[--request %d] No checkpoint for request %d — will run 1..%d first.",
+                N, N - 1, N,
+            )
+            init_database(db_engine)
+            completed = {}
+
+        # Pending = any uncompleted requests in 1..N
+        pending = sample[
+            (sample["request_id"] <= N) &
+            ~sample["request_id"].isin(completed.keys())
+        ]
+
+    elif force_rerun:
+        logger.info("Initializing Database (--force-rerun: starting fresh)")
         init_database(db_engine)
         completed = {}
+        pending = sample
+
     else:
         completed = _load_completed_request_ids(RESULTS_CSV)
         if completed:
-            print(f"Resuming: {len(completed)} completed, "
-                  f"{len(sample) - len(completed)} remaining.")
+            logger.info(
+                "Resuming: %d completed, %d remaining.",
+                len(completed), len(sample) - len(completed),
+            )
         else:
-            print("Initializing Database...")
+            logger.info("Initializing Database...")
             init_database(db_engine)
-
-    pending = sample[~sample["request_id"].isin(completed.keys())]
+        pending = sample[~sample["request_id"].isin(completed.keys())]
 
     if dry_run:
-        print("[DRY RUN] Processing first pending request only — no CSV written.")
+        logger.info("[DRY RUN] Processing first pending request only — no CSV written.")
         pending = pending.head(1)
-    elif limit:
+    elif limit and target_request is None:
         pending = pending.head(limit)
 
     if pending.empty:
-        print("All requests already completed. Use --force-rerun to reprocess.")
+        logger.info("All requests already completed. Use --force-rerun to reprocess.")
         return [completed[i] for i in sorted(completed)]
 
     # ------------------------------------------------------------------
@@ -338,6 +421,11 @@ def run_test_scenarios(
     current_cash = report["cash_balance"]
     current_inventory = report["inventory_value"]
 
+    # Generate a unique run_id for token tracking (shared across all requests in this run)
+    run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+    set_run_id(run_id)
+    logger.info("Run ID: %s", run_id)
+
     results_map = dict(completed)
 
     # ------------------------------------------------------------------
@@ -347,26 +435,57 @@ def run_test_scenarios(
         request_id   = int(row["request_id"])
         request_date = row["request_date"].strftime("%Y-%m-%d")
 
-        print(f"\n=== Request {request_id} / {len(sample)} ===")
-        print(f"  Context:  {row['job']} organising {row['event']}")
-        print(f"  Date:     {request_date}")
-        print(f"  Cash:     ${current_cash:.2f}  |  Inventory: ${current_inventory:.2f}")
+        logger.info(
+            "\n=== Request %d / %d === [%s | %s | %s] Cash: $%.2f",
+            request_id, len(sample), request_date, row["job"], row["event"], current_cash,
+        )
+        logger.debug("Inventory value before request: $%.2f", current_inventory)
+
+        # Tag all LLM calls in this request with request_id for token_usage.csv
+        set_request_context(request_id)
 
         request_with_date = f"{row['request']} (Date of request: {request_date})"
 
         try:
-            response = run_with_retry(orchestrator_agent, request_with_date)
+            deps = OrchestratorDeps(run_id=run_id, request_id=request_id, request_date=request_date)
+            response = run_with_retry(request_with_date, deps)
         except Exception as exc:
             # Non-retryable error (budget, auth) — record and continue
             response = f"[ERROR] Could not process request: {exc}"
-            print(f"  !! Request {request_id} failed (non-retryable): {exc}")
+            logger.error("Request %d failed (non-retryable): %s", request_id, exc)
 
         report = generate_financial_report(request_date)
         current_cash      = report["cash_balance"]
         current_inventory = report["inventory_value"]
 
-        print(f"  Response: {response[:120]}{'...' if len(response) > 120 else ''}")
-        print(f"  Cash after: ${current_cash:.2f}  |  Inventory: ${current_inventory:.2f}")
+        logger.info(
+            "Request %d done — Cash after: $%.2f | Response: %s%s",
+            request_id, current_cash,
+            response[:120], "..." if len(response) > 120 else "",
+        )
+        logger.debug("Full response for request %d:\n%s", request_id, response)
+
+        # --- Interactive pause: show response and wait for approval ---
+        if interactive:
+            print(f"\n{'='*60}")
+            print(f"REQUEST {request_id} RESPONSE:")
+            print(f"{'='*60}")
+            print(response)
+            print(f"{'='*60}")
+            print(f"Cash before: ${report['cash_balance'] - (current_cash - report['cash_balance']):.2f}  →  after: ${current_cash:.2f}")
+            print(f"Token usage logged to: {TOKEN_CSV.name}")
+            user_input = input("\nPress Enter to continue to next request, or 'q' to stop: ").strip().lower()
+            if user_input == "q":
+                logger.info("Interactive mode: user stopped after request %d.", request_id)
+                results_map[request_id] = {
+                    "request_id": request_id, "request_date": request_date,
+                    "cash_balance": current_cash, "inventory_value": current_inventory,
+                    "response": response,
+                }
+                if not dry_run:
+                    ordered = [results_map[i] for i in sorted(results_map)]
+                    pd.DataFrame(ordered).to_csv(RESULTS_CSV, index=False)
+                return [results_map[i] for i in sorted(results_map)]
 
         results_map[request_id] = {
             "request_id":      request_id,
@@ -380,25 +499,29 @@ def run_test_scenarios(
         if not dry_run:
             ordered = [results_map[i] for i in sorted(results_map)]
             pd.DataFrame(ordered).to_csv(RESULTS_CSV, index=False)
-            print(f"  [Saved] {RESULTS_CSV} ({len(results_map)}/{len(sample)} rows)")
+            logger.info("[Saved] %s (%d/%d rows)", RESULTS_CSV, len(results_map), len(sample))
+            _save_checkpoint(request_id)
 
     # ------------------------------------------------------------------
     # Final summary
     # ------------------------------------------------------------------
     final_date   = sample["request_date"].max().strftime("%Y-%m-%d")
     final_report = generate_financial_report(final_date)
-    print("\n===== FINAL FINANCIAL REPORT =====")
-    print(f"  Cash:      ${final_report['cash_balance']:.2f}")
-    print(f"  Inventory: ${final_report['inventory_value']:.2f}")
-    print(f"  Assets:    ${final_report['total_assets']:.2f}")
+    logger.info(
+        "\n===== FINAL FINANCIAL REPORT =====\n"
+        "  Cash:      $%.2f\n  Inventory: $%.2f\n  Assets:    $%.2f",
+        final_report["cash_balance"],
+        final_report["inventory_value"],
+        final_report["total_assets"],
+    )
 
     if dry_run:
-        print("\n[DRY RUN] Complete — no CSV written. Run without --dry-run when ready.")
+        logger.info("[DRY RUN] Complete — no CSV written. Run without --dry-run when ready.")
     else:
         total_done = len(results_map)
-        print(f"\n{RESULTS_CSV} — {total_done}/{len(sample)} requests recorded.")
+        logger.info("%s — %d/%d requests recorded.", RESULTS_CSV, total_done, len(sample))
         if total_done < len(sample):
-            print("Re-run without flags to continue from where we left off.")
+            logger.info("Re-run without flags to continue from where we left off.")
 
     return [results_map[i] for i in sorted(results_map)]
 
@@ -410,14 +533,26 @@ if __name__ == "__main__":
     import sys
 
     # Usage:
-    #   python project_starter.py                → resume (skip completed, run remaining)
-    #   python project_starter.py --dry-run      → 1 request, no CSV write (budget check)
-    #   python project_starter.py --force-rerun  → ignore results, reinit DB, run all 20
-    #   python project_starter.py --limit 5      → process at most 5 pending requests
-    dry_run     = "--dry-run"     in sys.argv
-    force_rerun = "--force-rerun" in sys.argv
-    limit       = None
+    #   python project_starter.py                   → resume (skip completed, run remaining)
+    #   python project_starter.py --dry-run         → 1 request, no CSV write (budget check)
+    #   python project_starter.py --force-rerun     → ignore results, reinit DB, run all 20
+    #   python project_starter.py --limit 5         → process at most 5 pending requests
+    #   python project_starter.py --request 3       → run up to request 3; re-run 3 if it
+    #                                                   already exists (restores DB checkpoint)
+    dry_run        = "--dry-run"     in sys.argv
+    force_rerun    = "--force-rerun" in sys.argv
+    interactive    = "--interactive" in sys.argv
+    limit          = None
+    target_request = None
+
     if "--limit" in sys.argv:
         limit = int(sys.argv[sys.argv.index("--limit") + 1])
 
-    results = run_test_scenarios(dry_run=dry_run, limit=limit, force_rerun=force_rerun)
+    if "--request" in sys.argv:
+        target_request = int(sys.argv[sys.argv.index("--request") + 1])
+
+    results = run_test_scenarios(
+        dry_run=dry_run, limit=limit,
+        force_rerun=force_rerun, interactive=interactive,
+        target_request=target_request,
+    )

@@ -1,244 +1,239 @@
 request_id,request_date,cash_balance,inventory_value,response
-1,2025-04-01,45124.7,4875.3,"Dear Customer,
+1,2025-04-01,45159.7,4840.3,"Thank you for your order with Munder Difflin Paper Company!
 
-Thank you for your order. Here are the details:
-- Glossy paper: 200 sheets at $0.20 each, total: $40.00
-- Cardstock: 100 sheets at $0.15 each, total: $15.00
-- Colored paper: 100 sheets at $0.10 each, total: $10.00
+Order Summary:
+  - Glossy paper: 200 units at $0.20 each = $40.00
+  - 100 lb cover stock: 100 units at $0.50 each = $50.00
+  - Colored paper: 100 units at $0.10 each = $10.00
 
-Order Total: $63.00
-Estimated Delivery Date: April 2, 2025
+No bulk discount applied — order of 400 units is within the 0–500 unit range.
+Order Total: $100.00
+Estimated Delivery Date: 2025-04-05
 
-Thank you for choosing us for your paper supplies!
-"
-2,2025-04-03,45624.7,4375.3,"Dear Customer,
-
-Thank you for your order! Here are the details:
-
-**Fulfilled Items:**
-- **Item:** Large poster paper (24x36 inches) 
-  - **Quantity:** 500 sheets 
-  - **Unit Price:** $1.00 
-  - **Line Total:** $500.00 
-
-**Order Total:** $500.00  
-**Estimated Delivery Date:** April 7, 2025
-
-Unfortunately, we were unable to fulfill the following items:
-- **Streamers:** not in stock
-- **Balloons:** not in stock
-
-We appreciate your understanding. If you have any further questions or would like to modify your order, please feel free to reach out.
-
-Best regards,
 Munder Difflin Paper Company"
-3,2025-04-04,45624.7,4375.3,"
-Dear Customer,
+2,2025-04-03,45659.7,4340.3,"Thank you for your order with Munder Difflin Paper Company!
 
-Thank you for your order request. We regret to inform you that we cannot fulfill your order as requested:
+Order Summary:
+  - Large poster paper (24x36 inches): 500 units at $1.00 each = $500.00
 
-- Requested 10000 sheets of A4 paper, but only 272 is available in stock.
-- Requested 5000 sheets of A3 paper is currently not available.
-- Requested 500 reams of Printer paper is currently not available.
-
-We apologize for any inconvenience this may cause and appreciate your understanding. If you would like to adjust your order or if you have any questions, please feel free to reach out.
-
-Best regards,
-Munder Difflin Paper Company
-"
-4,2025-04-05,45637.2,4362.8,"Dear Customer,
-
-Thank you for your order. Here are the details:
-
-Fulfilled Items:
-- A4 paper: 250 sheets at $0.05 each, total: $12.50
-
-Unfulfilled Items:
-- recycled cardstock: not in stock
-
-Order Total: $12.50
-Estimated Delivery Date: April 6, 2025.
-
-Best regards,
-Munder Difflin Paper Company"
-5,2025-04-05,45732.2,4267.8,"Thank you for your order! Here are the details:
-
-Fulfilled Items:
-- Colored paper: 500 sheets at $0.1 each (Total: $50.00)
-- Cardstock: 300 sheets at $0.15 each (Total: $45.00)
-
-Total Order Cost: $95.00
-Delivery Date: 2025-04-05
-
-Unfulfillable Items:
-- Washi tape: not in stock
-"
-6,2025-04-06,45732.2,4267.8,"Dear Customer,
-
-Thank you for your order request. Unfortunately, we regret to inform you that all of the items you requested are currently out of stock:
-- Colorful Construction Paper: 0 units available
-- White Printer Paper: 0 units available
-- Cardstock: 0 units available
-
-We recommend that you consider reordering these items at your earliest convenience to ensure that future requirements can be met. If you have any questions or would like assistance with selecting alternative products, please feel free to reach out.
-
-Best regards,
-Munder Difflin Paper Company"
-7,2025-04-07,45732.2,4267.8,"Dear Customer,
-
-Thank you for your order request for various types of paper supplies for your upcoming exhibition. Unfortunately, we are unable to fulfill your order at this time due to insufficient quantities in inventory.
-
-Here are the details of your requested items:
-- Glossy paper: requested 500, available 387 (insufficient quantity).
-- Large poster paper (24x36 inches): requested 300, available 199 (insufficient quantity).
-- Cardstock: requested 200, available 195 (insufficient quantity).
-
-Please let us know if you would like to adjust your order or if there's anything else we can assist you with.
-
-Best regards,
-Munder Difflin Paper Company"
-8,2025-04-07,45809.6,4190.4,"Thank you for placing an order with Munder Difflin Paper Company.
-We are pleased to confirm your order of the following:
-
-- 387 sheets of Glossy paper at $0.2 each (Line total: $77.40)
-
-Order Total: $77.40
+No bulk discount applied — order of 500 units is within the 0–500 unit range.
+Order Total: $500.00
 Estimated Delivery Date: 2025-04-07
 
-Unfortunately, we are unable to fulfill the following items:
-- A4 matte paper: UNAVAILABLE
-- A5 colored paper: UNAVAILABLE
-- A4 recycled paper: UNAVAILABLE"
-9,2025-04-07,45809.6,4190.4,"Dear Customer,
+Items We Could Not Fulfill:
+  - streamers: not available in our catalog
+  - balloons: not available in our catalog
 
-Thank you for your order request. Unfortunately, we are unable to fulfill your order for the following items:
-
-- A4 white printer paper: insufficient quantity (requested: 200, available: 22)
-- A3 glossy paper: unavailable
-- Kraft paper envelopes: unavailable
-
-We apologize for the inconvenience. Please let us know if you would like to modify your order or select alternative items.
-
-Best regards,
 Munder Difflin Paper Company"
-10,2025-04-08,45809.6,4190.4,"Thank you for your order request. Unfortunately, we are unable to fulfill your order for 500 sheets of A4 printing paper and 200 sheets of cardstock as both items are currently out of stock. We recommend checking back later or considering alternative products. We apologize for the inconvenience."
-11,2025-04-08,45809.6,4190.4,"Dear Customer,
+3,2025-04-04,45659.7,4340.3,"Thank you for contacting Munder Difflin Paper Company.
 
-Thank you for your order request on April 8, 2025. Unfortunately, we are unable to fulfill your entire order due to the following reasons:
+Unfortunately, we are unable to fulfill your order at this time.
 
-- Cardstock: Insufficient quantity (requested: 200, available: 195)
-- A4 paper: Insufficient quantity (requested: 500, available: 22)
-- Paper napkins: Not in stock
+Items We Could Not Fulfill:
+  - A4 paper: only 272 units available (requested 10000)
+  - A3 paper: not available in our catalog
+  - printer paper: not available in our catalog
 
-We apologize for the inconvenience. If you would like to modify your order or consider alternative products, please let us know.
-
-Best regards,
 Munder Difflin Paper Company"
-12,2025-04-08,45809.6,4190.4,"Dear Customer,
+4,2025-04-05,45895.95,4077.7999999999997,"Thank you for your order with Munder Difflin Paper Company!
 
-Thank you for your order request.
+Order Summary:
+  - 100 lb cover stock: 500 units at $0.50 each (10% bulk discount) = $225.00
+  - A4 paper: 250 units at $0.05 each (10% bulk discount) = $11.25
 
-Unfortunately, we are unable to fulfill your order for the following items:
-- Glossy paper: Not available in stock.
-- Cardstock: Insufficient stock (only 195 sheets available, but 300 requested).
+10% bulk discount applied — your order of 750 units exceeds the 500-unit threshold.
+Order Total: $236.25
+Estimated Delivery Date: 2025-04-09
 
-We apologize for this inconvenience and thank you for your understanding.
-
-Best regards,
 Munder Difflin Paper Company"
-13,2025-04-08,45809.6,4190.4,"Dear Customer,
+5,2025-04-05,45981.45,3982.7999999999997,"Thank you for your order with Munder Difflin Paper Company!
 
-Thank you for your order. Unfortunately, we cannot fulfill your request for the following items:
-- A3 glossy paper: Not in stock.
-- A4 matte paper: Not in stock.
+Order Summary:
+  - Colored paper: 500 units at $0.10 each (10% bulk discount) = $45.00
+  - Cardstock: 300 units at $0.15 each (10% bulk discount) = $40.50
 
-We apologize for the inconvenience. If you have any other requests or if there's another way we can assist you, please let us know.
+10% bulk discount applied — your order of 800 units exceeds the 500-unit threshold.
+Order Total: $85.50
+Estimated Delivery Date: 2025-04-09
 
-Best Regards,
+Items We Could Not Fulfill:
+  - decorative washi tape: not available in our catalog
+
 Munder Difflin Paper Company"
-14,2025-04-09,45809.6,4190.4,"Dear Customer,
+6,2025-04-06,46011.45,3952.7999999999997,"Thank you for your order with Munder Difflin Paper Company!
 
-Thank you for your order request. Unfortunately, we are unable to fulfill your entire order due to insufficient stock on the following items:
-- A4 paper: requested 5000, available 22
-- Large poster paper (24x36 inches): requested 2000, available 199
-- Cardstock: requested 500, available 195
+Order Summary:
+  - Cardstock: 200 units at $0.15 each = $30.00
 
-We apologize for the inconvenience and encourage you to consider alternate items or quantities. Please let us know how you would like to proceed.
+No bulk discount applied — order of 200 units is within the 0–500 unit range.
+Order Total: $30.00
+Estimated Delivery Date: 
 
-Thank you for your understanding.
-Best regards,
+Items We Could Not Fulfill:
+  - Construction paper: not available in our catalog
+  - A4 paper: only 22 units available (requested 300)
+
 Munder Difflin Paper Company"
-15,2025-04-12,45809.6,4190.4,"Dear Customer,
+7,2025-04-07,46260.21,3676.3999999999996,"Thank you for your order with Munder Difflin Paper Company!
 
-Thank you for your order request. Unfortunately, we are unable to fulfill your order due to the following reasons:
-- 10,000 sheets of A4 white paper: Not enough stock (only 22 units available)
-- 5,000 sheets of A3 colored paper: Not enough stock (only 188 units available)
-- 500 reams of cardboard for signage: Not available in inventory.
+Order Summary:
+  - Glossy paper: 387 units at $0.20 each (10% bulk discount) = $69.66
+  - Large poster paper (24x36 inches): 199 units at $1.00 each (10% bulk discount) = $179.10
 
-We apologize for any inconvenience this may cause. If you have any alternative requests or need assistance, please let us know.
+10% bulk discount applied — your order of 586 units exceeds the 500-unit threshold.
+Order Total: $248.76
+Estimated Delivery Date: 2025-04-11
 
-Best regards,
+Items We Could Not Fulfill:
+  - Matte paper: not available in our catalog
+  - Cardstock: only 95 units available (requested 200)
+
 Munder Difflin Paper Company"
-16,2025-04-13,45809.6,4190.4,"Unfortunately, we cannot fulfill your request for the following items:
-- A4 paper: insufficient quantity
-- Colored paper: insufficient quantity
-- Large poster paper (24x36 inches): not in stock
-Please consider adjusting your order or let us know if you have any other requests."
-17,2025-04-14,45859.6,4140.4,"
-Dear Customer,
+8,2025-04-07,46260.21,3676.3999999999996,"Thank you for contacting Munder Difflin Paper Company.
 
-Thank you for your order! Here are the details:
+Unfortunately, we are unable to fulfill your order at this time.
 
-**Fulfilled Items:**
-- **Paper plates:** 500 units at $0.10 each for a total of $50.00
+Items We Could Not Fulfill:
+  - Glossy paper: not available in our catalog
+  - Matte paper: not available in our catalog
+  - Colored paper: only 188 units available (requested 2000)
+  - Recycled paper: not available in our catalog
 
-**Order Total:** $50.00  
-**Delivery Date:** April 14, 2025
-
-**Unfulfillable Items:**
-- A4 printer paper: not in stock
-- A3 colored paper: not in stock
-- Table napkins: not in stock
-- Paper cups: not in stock
-
-We appreciate your understanding. If you have any questions or need further assistance, please do not hesitate to reach out.
-
-Best regards,
-Munder Difflin Paper Company
-"
-18,2025-04-14,45859.6,4140.4,"Dear Customer,
-
-Thank you for your order request. Unfortunately, we are unable to fulfill your entire order for the following items:
-- High-quality white cardstock: Requested 500 sheets, but only 195 sheets are available.
-- Standard printing paper: Requested 1000 sheets, but only 249 sheets of 80 lb text paper are available.
-- Colored paper: Requested 200 sheets, but only 188 sheets are available.
-
-Please let us know if you would like to adjust your order or if there is anything else we can assist you with.
-
-Best regards,
 Munder Difflin Paper Company"
-19,2025-04-15,45859.6,4140.4,"Dear Customer,
+9,2025-04-07,46290.21,3646.3999999999996,"Thank you for your order with Munder Difflin Paper Company!
 
-Thank you for your order request for the upcoming exhibition. Unfortunately, we must inform you that the following items are currently out of stock:
-- A4 glossy paper: 0 units available
-- A3 matte paper: 0 units available
-- Cardstock: 0 units available
+Order Summary:
+  - A4 paper: 200 units at $0.05 each = $10.00
+  - Glossy paper: 100 units at $0.20 each = $20.00
 
-This means we cannot fulfill your order as requested.
-To ensure you receive the supplies you need, it may be necessary to place an order for inventory replenishment.
+No bulk discount applied — order of 300 units is within the 0–500 unit range.
+Order Total: $30.00
+Estimated Delivery Date: 2025-04-11
 
-Thank you for understanding.
+Items We Could Not Fulfill:
+  - 100% recycled kraft paper envelopes: not available in our catalog
 
-Best regards,
-[Manufacturer's Name]"
-20,2025-04-17,45859.6,4140.4,"Dear Customer,
+Munder Difflin Paper Company"
+10,2025-04-08,46339.71,3591.3999999999996,"Thank you for your order with Munder Difflin Paper Company!
 
-Thank you for your order request for the upcoming concert. Unfortunately, we are unable to fulfill your order as requested. Here are the details:
-- Flyers: 5,000 units requested, but this item is not available in our inventory.
-- Posters: 2,000 units requested, but only 199 units of large poster paper are available.
-- Tickets: 10,000 units requested, but this item is not available in our inventory.
+Order Summary:
+  - A4 paper: 500 units at $0.05 each (10% bulk discount) = $22.50
+  - Cardstock: 200 units at $0.15 each (10% bulk discount) = $27.00
 
-We apologize for the inconvenience and appreciate your understanding. If you have any alternate requests or need assistance with other products, please don't hesitate to reach out.
+10% bulk discount applied — your order of 700 units exceeds the 500-unit threshold.
+Order Total: $49.50
+Estimated Delivery Date: 2025-04-12
 
-Best regards,
+Munder Difflin Paper Company"
+11,2025-04-08,46359.71,3571.3999999999996,"Thank you for your order with Munder Difflin Paper Company!
+
+Order Summary:
+  - Colored paper: 200 units at $0.10 each = $20.00
+
+No bulk discount applied — order of 200 units is within the 0–500 unit range.
+Order Total: $20.00
+Estimated Delivery Date: 2025-04-12
+
+Items We Could Not Fulfill:
+  - Standard printer paper: not available in our catalog
+  - Paper napkins: not available in our catalog
+
+Munder Difflin Paper Company"
+12,2025-04-08,46359.71,3571.3999999999996,"Thank you for contacting Munder Difflin Paper Company.
+
+Unfortunately, we are unable to fulfill your order at this time.
+
+Items We Could Not Fulfill:
+  - Glossy paper: not available in our catalog
+  - Cardstock: only 36 units available (requested 300)
+
+Munder Difflin Paper Company"
+13,2025-04-08,46359.71,3571.3999999999996,"Thank you for contacting Munder Difflin Paper Company.
+
+Unfortunately, we are unable to fulfill your order at this time.
+
+Items We Could Not Fulfill:
+  - A3 glossy paper: not available in our catalog
+  - A4 matte paper: not available in our catalog
+
+Munder Difflin Paper Company"
+14,2025-04-09,46359.71,3571.3999999999996,"Thank you for contacting Munder Difflin Paper Company.
+
+Unfortunately, we are unable to fulfill your order at this time.
+
+Items We Could Not Fulfill:
+  - A4 paper: not available in our catalog
+  - Poster paper: not available in our catalog
+  - Cardstock: not available in our catalog
+
+Munder Difflin Paper Company"
+15,2025-04-12,46359.71,3571.3999999999996,"Thank you for contacting Munder Difflin Paper Company.
+
+Unfortunately, we are unable to fulfill your order at this time.
+
+Items We Could Not Fulfill:
+  - A4 white paper: not available in our catalog
+  - A3 colored paper: not available in our catalog
+  - cardboard: not available in our catalog
+
+Munder Difflin Paper Company"
+16,2025-04-13,46359.71,3571.3999999999996,"Thank you for contacting Munder Difflin Paper Company.
+
+Unfortunately, we are unable to fulfill your order at this time.
+
+Items We Could Not Fulfill:
+  - A4 printer paper: not available in our catalog
+  - construction paper: not available in our catalog
+  - poster board: not available in our catalog
+
+Munder Difflin Paper Company"
+17,2025-04-14,46409.71,3521.3999999999996,"Thank you for your order with Munder Difflin Paper Company!
+
+Order Summary:
+  - Paper plates: 500 units at $0.10 each = $50.00
+
+No bulk discount applied — order of 500 units is within the 0–500 unit range.
+Order Total: $50.00
+Estimated Delivery Date: 2025-04-18
+
+Items We Could Not Fulfill:
+  - A4 paper: not available in our catalog
+  - Colored paper: not available in our catalog
+  - Paper napkins: not available in our catalog
+  - Paper cups: not available in our catalog
+
+Munder Difflin Paper Company"
+18,2025-04-14,46409.71,3521.3999999999996,"Thank you for contacting Munder Difflin Paper Company.
+
+Unfortunately, we are unable to fulfill your order at this time.
+
+Items We Could Not Fulfill:
+  - Cardstock: only 36 units available (requested 500)
+  - Printer paper: not available in our catalog
+  - Colored paper: not available in our catalog
+
+Munder Difflin Paper Company"
+19,2025-04-15,46877.21,2971.3999999999996,"Thank you for your order with Munder Difflin Paper Company!
+
+Order Summary:
+  - Glossy paper: 2000 units at $0.20 each (15% bulk discount) = $340.00
+  - Cardstock: 1000 units at $0.15 each (15% bulk discount) = $127.50
+
+15% bulk discount applied — your order of 3000 units exceeds the 1,000-unit threshold.
+Order Total: $467.50
+Estimated Delivery Date: 2025-04-22
+
+Items We Could Not Fulfill:
+  - Matte paper: not available in our catalog
+
+Munder Difflin Paper Company"
+20,2025-04-17,46877.21,2971.3999999999996,"Thank you for contacting Munder Difflin Paper Company.
+
+Unfortunately, we are unable to fulfill your order at this time.
+
+Items We Could Not Fulfill:
+  - flyers: not available in our catalog
+  - posters: not available in our catalog
+  - tickets: not available in our catalog
+
 Munder Difflin Paper Company"

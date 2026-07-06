@@ -6,12 +6,19 @@ so that the helper functions remain accessible at the top-level namespace for
 the test harness.
 """
 
+import sys
 import pandas as pd
 from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.sql import text
 from datetime import datetime, timedelta
 from typing import Dict, List, Union
+
+# Make logger_config importable when this module is loaded directly
+sys.path.insert(0, str(Path(__file__).parent))
+from logger_config import get_logger
+
+logger = get_logger("db_helpers")
 
 # ---------------------------------------------------------------------------
 # Database engine — single shared instance used by all helper functions
@@ -50,7 +57,10 @@ def get_all_inventory(as_of_date: str) -> Dict[str, int]:
         GROUP BY item_name
         HAVING stock > 0
     """
-    result = pd.read_sql(query, db_engine, params={"as_of_date": as_of_date})
+    params = {"as_of_date": as_of_date}
+    logger.debug("DB query [get_all_inventory]: %s | params=%s", query.strip(), params)
+    result = pd.read_sql(query, db_engine, params=params)
+    logger.debug("DB result [get_all_inventory]: %d rows", len(result))
     return dict(zip(result["item_name"], result["stock"]))
 
 
@@ -83,8 +93,11 @@ def get_stock_level(item_name: str, as_of_date: Union[str, datetime]) -> pd.Data
         WHERE item_name = :item_name
           AND transaction_date <= :as_of_date
     """
-    return pd.read_sql(query, db_engine,
-                       params={"item_name": item_name, "as_of_date": as_of_date})
+    params = {"item_name": item_name, "as_of_date": as_of_date}
+    logger.debug("DB query [get_stock_level]: %s | params=%s", query.strip(), params)
+    result = pd.read_sql(query, db_engine, params=params)
+    logger.debug("DB result [get_stock_level]: %d rows", len(result))
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -155,6 +168,11 @@ def create_transaction(
     if transaction_type not in {"stock_orders", "sales"}:
         raise ValueError("transaction_type must be 'stock_orders' or 'sales'")
 
+    logger.info(
+        "DB INSERT transaction: item=%s type=%s qty=%d price=$%.2f date=%s",
+        item_name, transaction_type, quantity, price, date_str,
+    )
+
     row = pd.DataFrame([{
         "item_name": item_name,
         "transaction_type": transaction_type,
@@ -165,7 +183,9 @@ def create_transaction(
     row.to_sql("transactions", db_engine, if_exists="append", index=False)
 
     result = pd.read_sql("SELECT last_insert_rowid() AS id", db_engine)
-    return int(result.iloc[0]["id"])
+    txn_id = int(result.iloc[0]["id"])
+    logger.info("DB transaction committed: id=%d", txn_id)
+    return txn_id
 
 
 # ---------------------------------------------------------------------------
@@ -187,11 +207,11 @@ def get_cash_balance(as_of_date: Union[str, datetime]) -> float:
         if isinstance(as_of_date, datetime):
             as_of_date = as_of_date.isoformat()
 
-        txns = pd.read_sql(
-            "SELECT * FROM transactions WHERE transaction_date <= :d",
-            db_engine,
-            params={"d": as_of_date},
-        )
+        query = "SELECT * FROM transactions WHERE transaction_date <= :d"
+        params = {"d": as_of_date}
+        logger.debug("DB query [get_cash_balance]: %s | params=%s", query.strip(), params)
+        txns = pd.read_sql(query, db_engine, params=params)
+        logger.debug("DB result [get_cash_balance]: %d rows", len(txns))
         if txns.empty:
             return 0.0
 
@@ -200,7 +220,7 @@ def get_cash_balance(as_of_date: Union[str, datetime]) -> float:
         return float(sales - purchases)
 
     except Exception as exc:
-        print(f"[get_cash_balance] Error: {exc}")
+        logger.error("[get_cash_balance] Error: %s", exc)
         return 0.0
 
 

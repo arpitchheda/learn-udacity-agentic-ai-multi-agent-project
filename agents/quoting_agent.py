@@ -1,5 +1,5 @@
 """
-agents/quoting_agent.py — Quoting specialist agent.
+agents/quoting_agent.py — Quoting specialist agent (pydantic-ai).
 
 Responsibilities:
     - Search historical quotes to calibrate pricing.
@@ -10,21 +10,34 @@ Discount tiers (unit-count based for precision):
     0 – 500 units   →  0 % discount
     501 – 1 000     → 10 % discount
     1 001+          → 15 % discount
+
+Helper functions used: search_quote_history, get_supplier_delivery_date, db_engine (inventory query)
 """
 
+import os
+import sys
 import pandas as pd
-from smolagents import ToolCallingAgent, tool
-from smolagents.monitoring import LogLevel
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+from pydantic_ai import Agent
 from db_helpers import db_engine, search_quote_history, get_supplier_delivery_date
-from agents.model_config import llm_model
+from agents.model_config import specialist_model
+from logger_config import get_logger
+
+logger = get_logger("agents.quoting")
+
+quoting_agent = Agent(
+    specialist_model,
+    system_prompt=(
+        "You are a quoting specialist for Munder Difflin Paper Company. "
+        "Search historical quotes to guide pricing and estimate delivery dates. "
+        "Discount tiers: 0-500 units=0%, 501-1000=10%, 1001+=15%."
+    ),
+)
 
 
-# ---------------------------------------------------------------------------
-# Tool 1 — search_quote_history_tool
-# Uses: search_quote_history()
-# ---------------------------------------------------------------------------
-@tool
+@quoting_agent.tool_plain
 def search_quote_history_tool(search_terms_str: str) -> str:
     """
     Search historical quotes for comparable past orders to guide pricing.
@@ -37,32 +50,28 @@ def search_quote_history_tool(search_terms_str: str) -> str:
     Returns:
         Formatted string of matching historical quotes with amounts and metadata.
     """
+    logger.info("[quoting] search_quote_history called — terms=%s", search_terms_str)
     terms = [t.strip() for t in search_terms_str.split(",") if t.strip()]
     results = search_quote_history(terms, limit=5)
 
     # Exclude rows with placeholder/invalid amounts
     valid = [r for r in results if r.get("total_amount") != -1]
     if not valid:
+        logger.warning("[quoting] No valid historical quotes found for terms: %s", search_terms_str)
         return "No relevant historical quotes found for these search terms."
 
+    logger.info("[quoting] Found %d valid historical quotes", len(valid))
     lines = ["Historical quote matches:"]
     for i, r in enumerate(valid, 1):
         lines.append(
-            f"\n[{i}] Request: {r.get('original_request', 'N/A')}\n"
-            f"    Amount: ${r.get('total_amount', 0):.2f} | "
-            f"Job: {r.get('job_type', 'N/A')} | "
-            f"Size: {r.get('order_size', 'N/A')} | "
-            f"Event: {r.get('event_type', 'N/A')}\n"
-            f"    Explanation: {r.get('quote_explanation', 'N/A')}"
+            f"[{i}] {r.get('original_request', 'N/A')} | "
+            f"${r.get('total_amount', 0):.2f} | {r.get('order_size', 'N/A')} | "
+            f"{r.get('event_type', 'N/A')}\n    {r.get('quote_explanation', 'N/A')}"
         )
     return "\n".join(lines)
 
 
-# ---------------------------------------------------------------------------
-# Tool 2 — estimate_delivery
-# Uses: get_supplier_delivery_date()
-# ---------------------------------------------------------------------------
-@tool
+@quoting_agent.tool_plain
 def estimate_delivery(start_date: str, quantity: int) -> str:
     """
     Estimate the supplier delivery date for an order.
@@ -77,15 +86,13 @@ def estimate_delivery(start_date: str, quantity: int) -> str:
     Returns:
         String stating the estimated delivery date.
     """
+    logger.info("[quoting] estimate_delivery called — start_date=%s quantity=%d", start_date, quantity)
     delivery = get_supplier_delivery_date(start_date, quantity)
+    logger.info("[quoting] Delivery estimate: %s", delivery)
     return f"Estimated delivery for {quantity} units ordered on {start_date}: {delivery}"
 
 
-# ---------------------------------------------------------------------------
-# Tool 3 — get_item_unit_prices
-# Uses: db_engine (inventory table lookup — no dedicated helper for this)
-# ---------------------------------------------------------------------------
-@tool
+@quoting_agent.tool_plain
 def get_item_unit_prices(item_names_str: str) -> str:
     """
     Look up unit prices for one or more inventory items by their exact names.
@@ -96,6 +103,7 @@ def get_item_unit_prices(item_names_str: str) -> str:
     Returns:
         Formatted string listing each item name and its unit price.
     """
+    logger.info("[quoting] get_item_unit_prices called — items=%s", item_names_str)
     names = [n.strip() for n in item_names_str.split(",") if n.strip()]
     if not names:
         return "No item names provided."
@@ -107,27 +115,7 @@ def get_item_unit_prices(item_names_str: str) -> str:
     for name in names:
         price = price_map.get(name)
         if price is not None:
-            lines.append(f"  - {name}: ${price:.4f} per unit")
+            lines.append(f"  {name}: ${price:.4f} per unit")
         else:
-            lines.append(f"  - {name}: not found in inventory")
+            lines.append(f"  {name}: not found in inventory")
     return "\n".join(lines)
-
-
-# ---------------------------------------------------------------------------
-# Agent definition
-# max_steps=6 — needs at most 3 tool calls (history + delivery + prices)
-# ---------------------------------------------------------------------------
-quoting_agent = ToolCallingAgent(
-    tools=[search_quote_history_tool, estimate_delivery, get_item_unit_prices],
-    model=llm_model,
-    name="quoting_agent",
-    description=(
-        "Handles pricing and delivery estimates. "
-        "Call this agent to: (1) search historical quotes for comparable orders, "
-        "(2) estimate a delivery date given a start date and quantity, "
-        "(3) look up unit prices for specific items. "
-        "Discount tiers: 0-500 units=0%, 501-1000=10%, 1001+=15%."
-    ),
-    max_steps=6,
-    verbosity_level=LogLevel.ERROR,
-)

@@ -9,7 +9,7 @@ OVERVIEW
 
 This system automates three core business operations for the
 Munder Difflin Paper Company using four AI agents built with
-the smolagents framework:
+pydantic-ai 2.5.0:
 
   1. Inventory management  — check stock levels
   2. Quote generation      — price orders using historical data
@@ -26,7 +26,7 @@ AGENT ARCHITECTURE
   Customer Request
         |
         v
-  Orchestrator Agent  (CodeAgent)
+  Orchestrator Agent  (gpt-4o, structured output)
     |        |              |
     v        v              v
 Inventory  Quoting        Sales
@@ -38,26 +38,44 @@ Agent      Agent          Agent
           SQLite Database
 
 
-ORCHESTRATOR AGENT (CodeAgent)
-  The single entry point for every customer request. Generates
-  Python code at each reasoning step to coordinate the three
-  worker agents in sequence. Never queries the database directly.
+ORCHESTRATOR AGENT
+  The single entry point for every customer request. Uses
+  pydantic-ai's structured output (output_type=OrderResponse)
+  to return a typed Pydantic model instead of freeform prose.
+  Never queries the database directly.
+
+  Model: gpt-4o (via openai.vocareum.com proxy)
+  Output type: OrderResponse (confirmed_sales, unfulfilled_items,
+               discount_rate, delivery_date)
 
   Responsibilities:
-    - Parse the request text and extract the date
+    - Parse the request text and extract the request date
     - Map informal customer item names to exact database names
       (e.g. "A4 glossy paper" -> "Glossy paper",
              "heavy cardstock" -> "100 lb cover stock")
     - Verify stock availability for each requested item
     - Apply tiered bulk discounts:
-        0-500 units   = 0% discount
+        0-500 units    = 0%  discount
         501-1000 units = 10% discount
         1001+ units    = 15% discount
-    - Call worker agents in order: inventory -> quoting -> sales
-    - Assemble the final customer-facing response
+    - Call worker agents via three tools:
+        check_inventory -> inventory_agent
+        record_sale     -> sales_agent
+        get_delivery    -> quoting_agent
+    - Return a typed OrderResponse — the customer message is
+      built deterministically in Python from typed fields
 
-INVENTORY AGENT (ToolCallingAgent)
+  Post-processing (_fix_order_response):
+    After the LLM returns OrderResponse, Python re-checks the
+    discount tier from total_units. If the LLM applied the
+    wrong tier, the DB transactions are deleted (by rowid) and
+    re-inserted at the correct price before the customer message
+    is assembled. This ensures the DB, cash balance, and
+    customer response always agree.
+
+INVENTORY AGENT
   Handles all stock-related queries.
+  Model: gpt-4o-mini
 
     check_all_inventory   uses get_all_inventory()
       Returns full stock snapshot with unit prices as of a date.
@@ -65,8 +83,9 @@ INVENTORY AGENT (ToolCallingAgent)
     check_stock_level     uses get_stock_level()
       Returns units on hand for a single specific item.
 
-QUOTING AGENT (ToolCallingAgent)
-  Estimates prices and delivery timelines.
+QUOTING AGENT
+  Estimates delivery timelines and looks up historical pricing.
+  Model: gpt-4o-mini
 
     search_quote_history_tool   uses search_quote_history()
       Finds comparable past quotes to guide pricing.
@@ -74,13 +93,15 @@ QUOTING AGENT (ToolCallingAgent)
 
     estimate_delivery           uses get_supplier_delivery_date()
       Calculates delivery lead time based on order quantity.
-      (<=10 units: same day | <=100: +1 day | <=1000: +4 days | >1000: +7 days)
+      (<=10 units: same day | <=100: +1 day | <=1000: +4 days
+       | >1000: +7 days)
 
     get_item_unit_prices        uses inventory table directly
       Looks up exact unit prices for specific items.
 
-SALES AGENT (ToolCallingAgent)
+SALES AGENT
   Records confirmed transactions and enforces financial controls.
+  Model: gpt-4o-mini
 
     finalize_sale               uses create_transaction()
       Records a completed customer sale in the database.
@@ -105,44 +126,66 @@ SALES AGENT (ToolCallingAgent)
 ORCHESTRATION FLOW (per request)
 ------------------------------------------------------------
 
-Step 1  Orchestrator calls inventory_agent to get the full item
-        list with stock quantities and unit prices as of the
-        request date.
+Step 1  Orchestrator calls check_inventory -> inventory_agent
+        to get the full item list with stock quantities and
+        unit prices as of the request date.
 
 Step 2  Orchestrator maps informal item names in the customer
         request to exact database item names.
 
 Step 3  Orchestrator checks that available stock >= requested
-        quantity for each item. Items failing this check are
-        flagged as unfulfillable.
+        quantity for each item. Insufficient stock -> added to
+        unfulfilled_items with "only N units available
+        (requested X)". Items not in catalog -> "not available
+        in our catalog".
 
-Step 4  Orchestrator calls quoting_agent to retrieve historical
-        pricing benchmarks and the estimated delivery date.
+Step 4  Orchestrator calls record_sale -> sales_agent for each
+        fulfillable item. record_sale looks up exact unit_price
+        from inventory DB and computes:
+          price = unit_price x quantity x (1 - discount_rate)
+        entirely in Python before delegating to sales_agent.
 
-Step 5  For each fulfillable item, orchestrator calls sales_agent
-        to record the sale transaction in the database.
+Step 5  Orchestrator calls get_delivery -> quoting_agent to
+        get the estimated delivery date as a YYYY-MM-DD string.
 
-Step 6  Orchestrator returns a professional customer response:
-        - Each item: name, quantity, unit price, discount, total
-        - Overall order total and estimated delivery date
-        - Reason for any items that could not be fulfilled
+Step 6  LLM returns typed OrderResponse. _fix_order_response()
+        verifies the discount tier and corrects any DB rows if
+        needed. to_customer_message() then builds the response
+        from typed fields — arithmetic is always correct.
 
 
 ------------------------------------------------------------
 DESIGN DECISIONS
 ------------------------------------------------------------
 
-CodeAgent for the orchestrator
-  CodeAgent generates executable Python code at each step,
-  allowing it to loop over variable-length item lists, branch
-  on stock availability, and call agents conditionally. This
-  is better suited to orchestration than ToolCallingAgent,
-  which selects from a fixed tool list.
+Structured output for the orchestrator
+  pydantic-ai's output_type=OrderResponse forces the LLM to
+  return a validated Pydantic model rather than prose. The
+  order total, discount explanation, and sign-off are all
+  computed in Python @property methods — the LLM cannot
+  hallucinate arithmetic.
 
-ToolCallingAgent for worker agents
-  Each worker has a small, well-defined tool set (2-5 tools)
-  and does not need dynamic code generation. ToolCallingAgent
-  is simpler, more predictable, and uses fewer tokens per step.
+Deterministic pricing in record_sale
+  The record_sale tool does not accept a price parameter from
+  the LLM. It looks up exact unit_price from the inventory
+  table in Python and computes:
+    price = unit_price x qty x (1 - discount_rate)
+  This guarantees the DB always records the same values shown
+  to the customer.
+
+Post-processing discount correction
+  _fix_order_response() re-checks the discount tier using a
+  deterministic _compute_discount_rate() function after the LLM
+  returns. If wrong, it deletes DB rows by SQLite rowid and
+  re-inserts at the correct price. Confirmed across 5 requests
+  in the test run (requests 4, 5, 7, 10, 19).
+
+Worker agents use @agent.tool_plain
+  Each worker has a small, well-defined tool set (2-5 tools).
+  Tools are defined with pydantic-ai's @agent.tool_plain
+  decorator and return plain strings. This is simpler, more
+  predictable, and uses fewer tokens than structured output
+  at the worker level.
 
 Non-overlapping responsibilities
   The inventory agent never prices or books. The quoting agent
@@ -158,20 +201,45 @@ Modular package structure
 20% cash safety margin
   The approve_purchase tool in the sales agent rejects any
   stock spend that would leave cash below 20% of the current
-  balance. This is an automated financial control that runs
-  on every proposed purchase without human intervention.
-
-Checkpoint / resume
-  test_results.csv is written incrementally after every request.
-  On restart without --force-rerun, the harness reads completed
-  request IDs and skips them, so a crash costs only the
-  in-flight request rather than the entire run.
+  balance. This is an automated financial control that runs on
+  every proposed stock purchase without human intervention.
 
 Retry with exponential backoff
-  Transient errors (rate limit, timeout, 5xx) are retried up
-  to 5 times with delays of 2, 4, 8, 16, 32 seconds.
-  Budget and auth errors are non-retryable and logged immediately
-  so the run continues with the next request.
+  Transient errors (rate limit, timeout, 502/503) trigger up
+  to 3 retry attempts with delays of 2 and 4 seconds. Budget
+  and auth errors are non-retryable and raise immediately so
+  the run continues with the next request.
+
+Placeholder sanitisation
+  A regex (_PLACEHOLDER_RE) in to_customer_message() replaces
+  any LLM-generated "[Manufacturer's Name]" or "[Company Name]"
+  patterns with "Munder Difflin Paper Company" before the
+  response is returned to the customer.
+
+
+------------------------------------------------------------
+EVALUATION RESULTS SUMMARY
+------------------------------------------------------------
+
+Full 20-request run on quote_requests_sample.csv (Apr 1-17, 2025)
+
+  Starting cash balance:  $45,059.70
+  Final cash balance:     $46,877.21
+  Net revenue from sales: +$1,817.51
+  Final inventory value:  $2,971.40
+  Final total assets:     $49,848.61
+
+  Fully fulfilled:         3 requests  (1, 4, 10)
+  Partially fulfilled:     8 requests  (2, 5, 6, 7, 9, 11, 17, 19)
+  Declined (all items):    9 requests  (3, 8, 12, 13, 14, 15, 16, 18, 20)
+
+  Cash balance changes:   11 requests  (rubric requires >=3: PASS)
+  Fulfilled quotes:       11 requests  (rubric requires >=3: PASS)
+  Unfulfilled with reason: 9 requests  (rubric requires >=1: PASS)
+
+  Post-processing discount corrections applied to: 5 requests
+    (4, 5, 7, 10, 19) — all DB values, cash balances, and
+    customer messages verified to agree after correction.
 
 
 ------------------------------------------------------------
@@ -189,14 +257,8 @@ HOW TO RUN
 
 4. Results are written to test_results.csv
 
-Optional flags:
-  --force-rerun   Reinitialise DB and reprocess all 20 requests
-  --dry-run       Run only request 1, skip CSV write (smoke test)
-  --limit N       Process only the first N requests
-
 To view the workflow diagram:
-  Check the workflow_diagram.png file or 
-  Open workflow_diagram.html in any browser.
-  Mermaid source is in workflow_diagram.mmd.
+  Check workflow_diagram.png or open workflow_diagram.html
+  in any browser. Mermaid source is in workflow_diagram.mmd.
 
 ============================================================
