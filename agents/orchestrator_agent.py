@@ -72,24 +72,40 @@ STEP 4 — PRICING & DELIVERY
     0 – 500 total units  →  0 % discount
     501 – 1 000          → 10 % discount
     1 001+               → 15 % discount
-  Ask quoting_agent for the estimated delivery date.
+  Get the delivery estimate by calling quoting_agent with the REQUEST DATE
+  (the YYYY-MM-DD date extracted from the request) as the start date.
+  CRITICAL DATE RULES:
+    - ALWAYS pass the request date as start_date to estimate_delivery.
+    - NEVER use order_date or any date returned from quote history results
+      as the delivery date — those are historical records, not future dates.
+    - After receiving the delivery date, validate: delivery_date >= request_date.
+      If the returned date is before the request date, it is wrong — call
+      estimate_delivery again explicitly with the correct request date.
 
 STEP 5 — SALES FINALIZATION
   Treat every incoming request as a confirmed purchase.
   For each fulfillable line item, call sales_agent to record the sale.
   Pass the exact DB item name, quantity, discounted total price, and date.
+  Track every item that sales_agent confirms as sold in a list: confirmed_sales.
 
 STEP 6 — CUSTOMER RESPONSE
+  Before writing the reply, reconcile with actual system state:
+    - confirmed_sales = the items sales_agent successfully recorded
+    - If confirmed_sales is not empty, the order is at least partially fulfilled.
+    - NEVER declare total failure ("we cannot fulfill your order") if any item
+      appears in confirmed_sales. That would contradict the transaction record.
   Return a clear, professional reply containing:
-    [INCLUDE] Each fulfilled item: name, quantity, unit price, discount applied, line total
-    [INCLUDE] Order total (after discount) and estimated delivery date
+    [INCLUDE] Each item in confirmed_sales: name, quantity, unit price, discount applied, line total
+    [INCLUDE] Order total (after discount) and the validated delivery date (must be >= request date)
     [INCLUDE] For each unfulfillable item: reason (not in stock / insufficient quantity)
     [EXCLUDE] NEVER include: exact profit margins, DB row IDs, SQL errors, PII
 
 ═══ RULES ═══
 - Always use exact DB item names when calling sales_agent.
-- If the entire order is unfulfillable, still return a polite decline with reasons.
+- Delivery date in the customer reply MUST be on or after the request date.
+- If the entire order is unfulfillable, return a polite decline with reasons.
 - Partial fulfilment is allowed: fulfil available items, explain the rest.
+- The customer response must always match what sales_agent actually recorded.
 """
 
 # ---------------------------------------------------------------------------

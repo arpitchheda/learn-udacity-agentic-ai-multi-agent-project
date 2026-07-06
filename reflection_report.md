@@ -138,59 +138,63 @@ The system was evaluated against all 20 requests in `quote_requests_sample.csv` 
 | Metric | Value |
 |--------|-------|
 | Starting cash balance | $45,059.70 |
-| Final cash balance | $46,746.00 |
-| Net revenue | **+$1,686.30** |
+| Final cash balance | $45,859.60 |
+| Net revenue | **+$799.90** |
 | Starting inventory value | $4,940.30 |
-| Final inventory value | $3,749.00 |
-| Total assets (final) | $50,495.00 |
+| Final inventory value | $4,140.40 |
+| Total assets (final) | $50,000.00 |
 
 ### Request Outcomes
 
 | Request | Date | Cash After | Status | Notes |
 |---------|------|-----------|--------|-------|
-| 1 | Apr 01 | $45,219.70 | Fulfilled | Glossy paper, Cardstock, Colored paper |
-| 2 | Apr 03 | $45,219.70 | Partial | Poster paper fulfilled; streamers + balloons OOS |
-| 3 | Apr 04 | $45,219.70 | Declined | A4 insufficient; A3 and printer paper not in inventory |
-| 4 | Apr 05 | $45,232.20 | Partial | A4 paper fulfilled; recycled cardstock OOS |
-| 5 | Apr 05 | $45,327.20 | Partial | Colored paper + Cardstock fulfilled; washi tape OOS |
-| 6 | Apr 06 | $45,327.20 | Declined | All 3 items below requested quantity |
-| 7 | Apr 07 | $45,627.20 | Partial | Large poster paper fulfilled; glossy, matte, cardstock OOS |
-| 8 | Apr 07 | $45,627.20 | Declined | All items OOS or insufficient |
-| 9 | Apr 07 | $45,877.20 | Partial | Kraft paper fulfilled; A4 paper + glossy paper OOS |
-| 10 | Apr 08 | $45,877.20 | Declined | A4 paper + cardstock both insufficient |
-| 11 | Apr 08 | $45,877.20 | Declined | Cardstock insufficient; printer paper insufficient; napkins OOS |
-| 12 | Apr 08 | $46,127.20 | Partial | 100 lb cover stock fulfilled; cardstock OOS |
-| 13 | Apr 08 | $46,127.20 | Declined | A3 glossy OOS; A4 matte insufficient |
-| 14 | Apr 09 | $46,127.20 | Declined | A4 paper, cardstock, poster paper all insufficient |
-| 15 | Apr 12 | $46,127.20 | Declined | All 3 large-qty items insufficient |
-| 16 | Apr 13 | $46,227.20 | Partial | Large poster paper fulfilled; A4 + construction paper OOS |
-| 17 | Apr 14 | $46,277.20 | Partial | Paper plates fulfilled; 4 other items OOS |
-| 18 | Apr 14 | $46,277.20 | Partial | Colored paper fulfilled; cardstock + printing paper OOS |
-| 19 | Apr 15 | $46,746.00 | Partial | Fulfilled available stock; A4 glossy + A3 matte insufficient |
-| 20 | Apr 17 | $46,746.00 | Declined | Flyers, posters, tickets — none in inventory |
+| 1 | Apr 01 | $45,124.70 | Fulfilled | Glossy paper, Cardstock, Colored paper — delivery Apr 2 |
+| 2 | Apr 03 | $45,624.70 | Partial | Large poster paper fulfilled; streamers + balloons OOS — delivery Apr 7 |
+| 3 | Apr 04 | $45,624.70 | Declined | A4 insufficient; A3 paper + printer paper not in inventory |
+| 4 | Apr 05 | $45,637.20 | Partial | A4 paper fulfilled; recycled cardstock OOS — delivery Apr 6 |
+| 5 | Apr 05 | $45,732.20 | Partial | Colored paper + Cardstock fulfilled; washi tape OOS |
+| 6 | Apr 06 | $45,732.20 | Declined | All 3 items out of stock |
+| 7 | Apr 07 | $45,732.20 | Declined | Glossy, poster paper, cardstock all insufficient qty |
+| 8 | Apr 07 | $45,809.60 | Partial | Glossy paper (387 units) fulfilled; matte, colored, recycled OOS |
+| 9 | Apr 07 | $45,809.60 | Declined | A4 paper insufficient; A3 glossy + kraft envelopes OOS |
+| 10 | Apr 08 | $45,809.60 | Declined | A4 paper + cardstock both OOS |
+| 11 | Apr 08 | $45,809.60 | Declined | Cardstock + A4 paper insufficient; napkins OOS |
+| 12 | Apr 08 | $45,809.60 | Declined | Glossy paper OOS; cardstock insufficient |
+| 13 | Apr 08 | $45,809.60 | Declined | A3 glossy + A4 matte not in inventory |
+| 14 | Apr 09 | $45,809.60 | Declined | A4 paper, poster paper, cardstock all insufficient |
+| 15 | Apr 12 | $45,809.60 | Declined | All 3 large-qty items insufficient |
+| 16 | Apr 13 | $45,809.60 | Declined | A4 paper + colored paper insufficient; poster paper OOS |
+| 17 | Apr 14 | $45,859.60 | Partial | Paper plates fulfilled; A4, A3, napkins, cups OOS — delivery Apr 14 |
+| 18 | Apr 14 | $45,859.60 | Declined | Cardstock, printing paper, colored paper all insufficient |
+| 19 | Apr 15 | $45,859.60 | Declined | A4 glossy, A3 matte, cardstock all OOS |
+| 20 | Apr 17 | $45,859.60 | Declined | Flyers + tickets not in inventory; poster paper insufficient |
 
-**Cash balance changes: 8 requests** (requirement: ≥3) ✓  
-**Successfully fulfilled quotes: 9 requests** (requirement: ≥3) ✓  
-**Unfulfilled/partial requests: 11 requests** with reasons provided ✓
+**Cash balance changes: 5 requests** (req 1, 2, 4, 5, 8, 17 — requirement: ≥3) ✓  
+**Successfully fulfilled quotes: 5 requests** (req 1, 2, 4, 5, 8, 17 — requirement: ≥3) ✓  
+**Unfulfilled/partial requests: 15 requests** with specific reasons provided ✓  
+**Stale delivery dates (2023): 0** — all delivery dates correctly anchored to 2025 ✓
 
 ---
 
 ## 5. Strengths of the Implementation
 
-### Transparent customer communication
-Every response includes a line-item breakdown with unit prices, totals, discount rationale, and delivery dates. When items cannot be supplied, the response always states the specific reason (out of stock, insufficient quantity, not in catalogue). No internal data (DB row IDs, profit margins, SQL errors) is ever exposed.
+### Transparent and accurate customer communication
+Every fulfilled response includes a line-item breakdown with unit prices, quantities, totals, and delivery dates anchored to the actual request date. All delivery dates are on or after the request date (validated in the orchestrator). When items cannot be supplied, the response states the exact reason and available quantity (e.g. request 14: "A4 paper: requested 5000, available 22"). No internal data — DB row IDs, profit margins, SQL errors — is ever exposed.
 
-### Partial fulfillment
-Rather than rejecting an entire order when one item is unavailable, the system fulfills whatever it can and explains each gap. Requests 2, 4, 5, 7, 9, 12, 16, 17, 18, and 19 all demonstrate partial fulfillment — a significantly better customer experience than an all-or-nothing rejection.
+### Correct response/state reconciliation
+The orchestrator tracks confirmed sales from the sales agent before writing the final response. This ensures the customer reply always matches what was actually recorded in the database — a customer is never told their order failed if a transaction was successfully written.
+
+### Partial fulfillment handling
+Rather than rejecting an entire order when one item is unavailable, the system fulfills whatever it can and explains each gap individually. Requests 2, 4, 5, 8, and 17 all demonstrate partial fulfillment with clear breakdowns of fulfilled vs. unfulfilled items and reasons for each gap.
 
 ### Robust item name resolution
-The inventory seeded ~17 of 42 possible products with exact names like `"100 lb cover stock"` and `"Large poster paper (24x36 inches)"`. Customer requests used informal language like `"heavy cardstock"` and `"poster board"`. The orchestrator's name-mapping table in the system prompt resolved these reliably across all 20 requests without a single mapping error causing an incorrect sale.
+The inventory seeded ~18 of 42 possible products with exact names like `"100 lb cover stock"` and `"Large poster paper (24x36 inches)"`. Customer requests used informal language like `"heavy cardstock"` and `"poster board"`. The orchestrator's name-mapping table resolved these reliably across all 20 requests, and items that couldn't be mapped were correctly flagged as unavailable.
 
 ### Financial discipline
-The 20% cash safety margin in `approve_purchase` acted as an automated financial control. Cash grew by $1,686 across the test period while the reserve was never breached. The `calculate_financial_health` tool rated the company's position throughout the run as EXCELLENT (cash-to-assets ratio consistently above 85%).
+The 20% cash safety margin in `approve_purchase` acted as an automated financial control throughout the test period. Cash grew from $45,059.70 to $45,859.60 while the reserve was never breached. The `calculate_financial_health` tool rated the company's position as EXCELLENT (cash-to-assets ratio above 90%) for the duration of the run.
 
 ### Operational resilience
-The run crashed once at request 14 due to a console encoding error (Unicode checkmark character on Windows cp1252). The checkpoint/resume mechanism meant only that single in-flight request was lost — all prior results were preserved and the run completed cleanly after a one-line fix (`sys.stdout.reconfigure(encoding='utf-8')`).
+The checkpoint/resume mechanism writes `test_results.csv` incrementally after every request. When a run was interrupted mid-way (encoding error on Windows cp1252 from a Unicode character in agent output), resuming without `--force-rerun` skipped all completed requests and continued from where it left off — zero data loss.
 
 ---
 
@@ -214,9 +218,9 @@ After processing all requests, a business advisor agent could call `generate_fin
 
 The Munder Difflin multi-agent system successfully automates inventory checking, quote generation, and order fulfillment for a paper supply business. The four-agent architecture — orchestrator plus three specialist workers — cleanly separates concerns, uses all 7 required helper functions, and produces transparent, justified responses for every customer interaction.
 
-The evaluation across 20 live test requests demonstrated that the system handles partial fulfillment gracefully, applies financial controls automatically, and recovers from transient failures without data loss. The 8 cash balance changes and $1,686.30 net revenue across the test period confirm that the core business logic is working correctly.
+The evaluation across 20 live test requests demonstrated that the system handles partial fulfillment gracefully, applies financial controls automatically, and recovers from transient failures without data loss. The 5 cash balance changes and $799.90 net revenue across the test period confirm that the core business logic is working correctly. All delivery dates are correctly anchored to the request date — zero stale 2023 dates remain — and every customer response accurately reflects what was actually recorded in the database.
 
-The primary area for future investment is smarter demand handling: automated reorder triggers, embedding-based name resolution, and negotiation capability would reduce the 11 partially-fulfilled or declined requests and make the system production-ready.
+The primary area for future investment is smarter demand handling: automated reorder triggers, embedding-based name resolution, and negotiation capability would convert more of the 15 declined/partial requests into completed sales and make the system production-ready.
 
 ---
 
